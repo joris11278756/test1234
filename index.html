@@ -4,66 +4,88 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>To-do & Chat App</title>
+
+  <!-- Google Font voor modernere look -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div id="auth-container">
-    <h1>Inloggen / Registreren</h1>
+  <div id="auth-container" class="card">
+    <h1 class="title">Welkom</h1>
+    <p class="subtitle">Log in of maak een account aan</p>
 
     <div class="auth-forms">
+
+      <!-- Login -->
       <div class="auth-box">
         <h2>Inloggen</h2>
         <input id="login-username" type="text" placeholder="Gebruikersnaam">
         <input id="login-password" type="password" placeholder="Wachtwoord">
-        <button id="login-btn">Inloggen</button>
+        <button id="login-btn" class="btn primary">Inloggen</button>
         <p id="login-error" class="error"></p>
       </div>
 
+      <!-- Register -->
       <div class="auth-box">
         <h2>Registreren</h2>
         <input id="register-username" type="text" placeholder="Gebruikersnaam">
         <input id="register-password" type="password" placeholder="Wachtwoord">
-        <label>
+
+        <label class="checkbox">
           <input id="register-is-admin" type="checkbox">
-          Admin?
+          Admin account
         </label>
-        <button id="register-btn">Account aanmaken</button>
+
+        <button id="register-btn" class="btn secondary">Account aanmaken</button>
         <p id="register-error" class="error"></p>
       </div>
+
     </div>
   </div>
 
+  <!-- App -->
   <div id="app" class="hidden">
-    <header>
+
+    <header class="app-header">
       <h1>Welkom, <span id="current-user-name"></span></h1>
-      <button id="logout-btn">Uitloggen</button>
+      <button id="logout-btn" class="btn danger">Uitloggen</button>
     </header>
 
-    <main>
-      <section id="todo-section">
+    <main class="grid">
+
+      <!-- To-do -->
+      <section class="card">
         <h2>To-do lijst</h2>
+
         <div class="todo-input">
           <input id="todo-input" type="text" placeholder="Nieuwe taak...">
-          <button id="add-todo-btn">Toevoegen</button>
+          <button id="add-todo-btn" class="btn primary">Toevoegen</button>
         </div>
-        <ul id="todo-list"></ul>
+
+        <ul id="todo-list" class="todo-list"></ul>
       </section>
 
-      <section id="chat-section">
+      <!-- Chat -->
+      <section class="card">
         <h2>Chat</h2>
-        <div id="chat-messages"></div>
+
+        <div id="chat-messages" class="chat-box"></div>
+
         <div class="chat-input">
           <input id="chat-input" type="text" placeholder="Typ een bericht...">
-          <button id="send-chat-btn">Verstuur</button>
+          <button id="send-chat-btn" class="btn primary">Verstuur</button>
         </div>
       </section>
 
-      <section id="admin-section" class="hidden">
+      <!-- Admin -->
+      <section id="admin-section" class="card hidden">
         <h2>Admin dashboard</h2>
-        <p>Alle gebruikers en hun to-do’s:</p>
-        <div id="admin-users"></div>
+        <p>Overzicht van alle gebruikers en taken:</p>
+        <div id="admin-users" class="admin-list"></div>
       </section>
+
     </main>
   </div>
 
