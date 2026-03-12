@@ -1,0 +1,114 @@
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f4f4f4;
+  color: #333;
+}
+
+.hidden {
+  display: none;
+}
+
+.error {
+  color: red;
+  font-size: 0.9rem;
+}
+
+#auth-container {
+  max-width: 900px;
+  margin: 60px auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.auth-forms {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.auth-box {
+  flex: 1;
+  min-width: 260px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.auth-box input {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0;
+}
+
+.auth-box button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+#app {
+  max-width: 1100px;
+  margin: 20px auto;
+  padding: 10px 20px 40px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr;
+  gap: 20px;
+}
+
+section {
+  background: #fff;
+  border-radius: 6px;
+  padding: 15px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+#todo-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+#todo-section li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+#chat-messages {
+  height: 250px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 8px;
+  background: #fafafa;
+}
+
+.chat-input {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#admin-users {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 8px;
+  background: #fafafa;
+}
