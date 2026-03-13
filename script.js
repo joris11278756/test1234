@@ -1,5 +1,3 @@
-
-
 // -----------------------------
 // ELEMENTEN
 // -----------------------------
@@ -55,13 +53,11 @@ registerBtn.onclick = async () => {
     }
 
     try {
-        // Firebase vereist een e-mail, dus we maken er één
         const email = `${username}@app.com`;
 
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const uid = userCredential.user.uid;
 
-        // Extra data opslaan in Firestore
         await db.collection("users").doc(uid).set({
             username,
             isAdmin,
@@ -138,7 +134,7 @@ function loadChat() {
             snapshot.forEach(doc => {
                 const div = document.createElement("div");
                 div.classList.add("chat-message");
-                div.textContent = doc.data().text;
+                div.textContent = doc.data().user + ": " + doc.data().text;
                 chatMessages.appendChild(div);
             });
         });
