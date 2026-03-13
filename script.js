@@ -1,202 +1,159 @@
-// -----------------------------
-// ELEMENTEN
-// -----------------------------
-const authContainer = document.getElementById("auth-container");
-const app = document.getElementById("app");
-
-const loginBtn = document.getElementById("login-btn");
-const registerBtn = document.getElementById("register-btn");
-const logoutBtn = document.getElementById("logout-btn");
-
-const loginError = document.getElementById("login-error");
-const registerError = document.getElementById("register-error");
-
-const currentUserName = document.getElementById("current-user-name");
-
-const todoInput = document.getElementById("todo-input");
-const addTodoBtn = document.getElementById("add-todo-btn");
-const todoList = document.getElementById("todo-list");
-
-const chatInput = document.getElementById("chat-input");
-const sendChatBtn = document.getElementById("send-chat-btn");
-const chatMessages = document.getElementById("chat-messages");
-
-const adminSection = document.getElementById("admin-section");
-const adminUsers = document.getElementById("admin-users");
-
-let currentUserData = null;
 
 // -----------------------------
-// UI FUNCTIES
+// Firebase config
 // -----------------------------
-function showApp() {
-    authContainer.classList.add("hidden");
-    app.classList.remove("hidden");
+const firebaseConfig = {
+  apiKey: "AIzaSyAw4F7DJj1oDZyxL4yh-db4wm_JujyUvwI",
+  authDomain: "test1234-11278756.firebaseapp.com",
+  projectId: "test1234-11278756",
+  storageBucket: "test1234-11278756.appspot.com",
+  messagingSenderId: "824253794115",
+  appId: "1:824253794115:web:bf6d024f90bce98d4711f6"
+};
+
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// -----------------------------
+// DOM
+// -----------------------------
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+const registerBtn = document.getElementById("registerBtn");
+const loginBtn = document.getElementById("loginBtn");
+const authMessage = document.getElementById("authMessage");
+
+const userSection = document.getElementById("user-section");
+const userEmailSpan = document.getElementById("userEmail");
+const logoutBtn = document.getElementById("logoutBtn");
+
+const todoSection = document.getElementById("todo-section");
+const todoInput = document.getElementById("todoInput");
+const addTodoBtn = document.getElementById("addTodoBtn");
+const todoList = document.getElementById("todoList");
+const adminBtn = document.getElementById("adminBtn");
+
+// -----------------------------
+// Logging
+// -----------------------------
+function logAction(type, details = {}) {
+  const user = auth.currentUser;
+  db.collection("logs").add({
+    type,
+    details,
+    uid: user ? user.uid : null,
+    email: user ? user.email : null,
+    created: Date.now()
+  });
 }
 
-function showLogin() {
-    authContainer.classList.remove("hidden");
-    app.classList.add("hidden");
-}
-
 // -----------------------------
-// REGISTREREN
+// Auth
 // -----------------------------
 registerBtn.onclick = async () => {
-    const username = document.getElementById("register-username").value.trim();
-    const password = document.getElementById("register-password").value.trim();
-    const isAdmin = document.getElementById("register-is-admin").checked;
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+  const email = `${username}@app.com`;
 
-    if (!username || !password) {
-        registerError.textContent = "Vul alle velden in.";
-        return;
-    }
-
-    try {
-        const email = `${username}@app.com`;
-
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const uid = userCredential.user.uid;
-
-        await db.collection("users").doc(uid).set({
-            username,
-            isAdmin,
-            createdAt: Date.now()
-        });
-
-        registerError.textContent = "Account aangemaakt!";
-    } catch (err) {
-        registerError.textContent = err.message;
-    }
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    logAction("register", { username });
+  } catch (err) {
+    authMessage.textContent = err.message;
+  }
 };
 
-// -----------------------------
-// INLOGGEN
-// -----------------------------
 loginBtn.onclick = async () => {
-    const username = document.getElementById("login-username").value.trim();
-    const password = document.getElementById("login-password").value.trim();
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+  const email = `${username}@app.com`;
 
-    try {
-        const email = `${username}@app.com`;
-        await auth.signInWithEmailAndPassword(email, password);
-    } catch (err) {
-        loginError.textContent = "Onjuiste gegevens.";
-    }
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    logAction("login", { username });
+  } catch (err) {
+    authMessage.textContent = err.message;
+  }
+};
+
+logoutBtn.onclick = () => {
+  auth.signOut();
+  logAction("logout");
+};
+
+adminBtn.onclick = () => {
+    window.location.href = "admin.html";
 };
 
 // -----------------------------
-// UITLOGGEN
-// -----------------------------
-logoutBtn.onclick = () => auth.signOut();
-
-// -----------------------------
-// TODO-LIJST
+// Todo functionaliteit
 // -----------------------------
 function loadTodos(uid) {
-    db.collection("todos")
-        .where("user", "==", uid)
-        .orderBy("created")
-        .onSnapshot(snapshot => {
-            todoList.innerHTML = "";
-            snapshot.forEach(doc => {
-                const li = document.createElement("li");
-                li.textContent = doc.data().text;
+  return db.collection("todos")
+    .where("user", "==", uid)
+    .orderBy("created")
+    .onSnapshot(snapshot => {
+      todoList.innerHTML = "";
 
-                li.onclick = () => doc.ref.delete();
+      snapshot.forEach(doc => {
+        const data = doc.data();
 
-                todoList.appendChild(li);
-            });
-        });
+        const li = document.createElement("li");
+        li.textContent = data.text;
+
+        li.onclick = () => {
+          doc.ref.delete();
+          logAction("todo_delete", { text: data.text });
+        };
+
+        todoList.appendChild(li);
+      });
+    });
 }
 
 addTodoBtn.onclick = () => {
-    const task = todoInput.value.trim();
-    if (!task || !auth.currentUser) return;
+  const task = todoInput.value.trim();
+  const user = auth.currentUser;
 
-    db.collection("todos").add({
-        user: auth.currentUser.uid,
-        text: task,
-        created: Date.now()
-    });
+  if (!task || !user) return;
 
-    todoInput.value = "";
+  db.collection("todos").add({
+    user: user.uid,
+    text: task,
+    created: Date.now()
+  });
+
+  logAction("todo_add", { text: task });
+  todoInput.value = "";
 };
 
 // -----------------------------
-// CHAT
+// Auth listener
 // -----------------------------
-function loadChat() {
-    db.collection("chat")
-        .orderBy("created")
-        .onSnapshot(snapshot => {
-            chatMessages.innerHTML = "";
-            snapshot.forEach(doc => {
-                const div = document.createElement("div");
-                div.classList.add("chat-message");
-                div.textContent = doc.data().user + ": " + doc.data().text;
-                chatMessages.appendChild(div);
-            });
-        });
-}
+let unsubTodos = null;
 
-sendChatBtn.onclick = () => {
-    const msg = chatInput.value.trim();
-    if (!msg || !auth.currentUser) return;
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById("auth-section").classList.add("hidden");
+    userSection.classList.remove("hidden");
+    todoSection.classList.remove("hidden");
 
-    db.collection("chat").add({
-        user: currentUserData.username,
-        text: msg,
-        created: Date.now()
-    });
+    userEmailSpan.textContent = user.email;
 
-    chatInput.value = "";
-};
-
-// -----------------------------
-// ADMIN PANEL
-// -----------------------------
-function loadAdminPanel() {
-    db.collection("users").onSnapshot(snapshot => {
-        adminUsers.innerHTML = "";
-
-        snapshot.forEach(doc => {
-            const u = doc.data();
-
-            const box = document.createElement("div");
-            box.classList.add("admin-box");
-
-            box.innerHTML = `
-                <strong>${u.username}</strong> (${u.isAdmin ? "Admin" : "User"})
-            `;
-
-            adminUsers.appendChild(box);
-        });
-    });
-}
-
-// -----------------------------
-// AUTH STATE LISTENER
-// -----------------------------
-auth.onAuthStateChanged(async user => {
-    if (user) {
-        showApp();
-
-        const doc = await db.collection("users").doc(user.uid).get();
-        currentUserData = doc.data();
-
-        currentUserName.textContent = currentUserData.username;
-
-        loadTodos(user.uid);
-        loadChat();
-
-        if (currentUserData.isAdmin) {
-            adminSection.classList.remove("hidden");
-            loadAdminPanel();
-        } else {
-            adminSection.classList.add("hidden");
-        }
+    if ("a"=== "a") {//user.uid === ADMIN_UID
+      adminBtn.classList.remove("hidden");
     } else {
-        showLogin();
+      adminBtn.classList.add("hidden");
     }
+
+    if (unsubTodos) unsubTodos();
+    unsubTodos = loadTodos(user.uid);
+  } else {
+    document.getElementById("auth-section").classList.remove("hidden");
+    userSection.classList.add("hidden");
+    todoSection.classList.add("hidden");
+    todoList.innerHTML = "";
+  }
 });
