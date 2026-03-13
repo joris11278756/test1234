@@ -1,8 +1,8 @@
 // -----------------------------
-// DATA OPSLAG
+// FIREBASE REFERENTIES
 // -----------------------------
-let users = JSON.parse(localStorage.getItem("users")) || [];
-let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 // -----------------------------
 // ELEMENTEN
@@ -30,36 +30,17 @@ const chatMessages = document.getElementById("chat-messages");
 const adminSection = document.getElementById("admin-section");
 const adminUsers = document.getElementById("admin-users");
 
-// -----------------------------
-// HELPER FUNCTIES
-// -----------------------------
-function saveUsers() {
-    localStorage.setItem("users", JSON.stringify(users));
-}
+let currentUserData = null;
 
-function saveCurrentUser() {
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-}
-
+// -----------------------------
+// UI FUNCTIES
+// -----------------------------
 function showApp() {
     authContainer.classList.add("hidden");
     app.classList.remove("hidden");
-    currentUserName.textContent = currentUser.username;
-
-    if (currentUser.isAdmin) {
-        adminSection.classList.remove("hidden");
-        updateAdminPanel();
-    } else {
-        adminSection.classList.add("hidden");
-    }
-
-    loadTodos();
-    loadChat();
 }
 
 function showLogin() {
-    currentUser = null;
-    saveCurrentUser();
     authContainer.classList.remove("hidden");
     app.classList.add("hidden");
 }
@@ -67,7 +48,7 @@ function showLogin() {
 // -----------------------------
 // REGISTREREN
 // -----------------------------
-registerBtn.onclick = () => {
+registerBtn.onclick = async () => {
     const username = document.getElementById("register-username").value.trim();
     const password = document.getElementById("register-password").value.trim();
     const isAdmin = document.getElementById("register-is-admin").checked;
@@ -77,73 +58,76 @@ registerBtn.onclick = () => {
         return;
     }
 
-    if (users.some(u => u.username === username)) {
-        registerError.textContent = "Gebruikersnaam bestaat al.";
-        return;
+    try {
+        // Firebase vereist een e-mail, dus we maken er één
+        const email = `${username}@app.com`;
+
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const uid = userCredential.user.uid;
+
+        // Extra data opslaan in Firestore
+        await db.collection("users").doc(uid).set({
+            username,
+            isAdmin,
+            createdAt: Date.now()
+        });
+
+        registerError.textContent = "Account aangemaakt!";
+    } catch (err) {
+        registerError.textContent = err.message;
     }
-
-    users.push({
-        username,
-        password,
-        isAdmin,
-        todos: [],
-        messages: []
-    });
-
-    saveUsers();
-    registerError.textContent = "Account aangemaakt!";
 };
 
 // -----------------------------
 // INLOGGEN
 // -----------------------------
-loginBtn.onclick = () => {
+loginBtn.onclick = async () => {
     const username = document.getElementById("login-username").value.trim();
     const password = document.getElementById("login-password").value.trim();
 
-    const user = users.find(u => u.username === username && u.password === password);
-
-    if (!user) {
+    try {
+        const email = `${username}@app.com`;
+        await auth.signInWithEmailAndPassword(email, password);
+    } catch (err) {
         loginError.textContent = "Onjuiste gegevens.";
-        return;
     }
-
-    currentUser = user;
-    saveCurrentUser();
-    showApp();
 };
 
 // -----------------------------
 // UITLOGGEN
 // -----------------------------
-logoutBtn.onclick = () => {
-    showLogin();
-};
+logoutBtn.onclick = () => auth.signOut();
 
 // -----------------------------
 // TODO-LIJST
 // -----------------------------
-function loadTodos() {
-    todoList.innerHTML = "";
-    currentUser.todos.forEach((task, index) => {
-        const li = document.createElement("li");
-        li.textContent = task;
-        li.onclick = () => {
-            currentUser.todos.splice(index, 1);
-            saveUsers();
-            loadTodos();
-        };
-        todoList.appendChild(li);
-    });
+function loadTodos(uid) {
+    db.collection("todos")
+        .where("user", "==", uid)
+        .orderBy("created")
+        .onSnapshot(snapshot => {
+            todoList.innerHTML = "";
+            snapshot.forEach(doc => {
+                const li = document.createElement("li");
+                li.textContent = doc.data().text;
+
+                li.onclick = () => doc.ref.delete();
+
+                todoList.appendChild(li);
+            });
+        });
 }
 
 addTodoBtn.onclick = () => {
     const task = todoInput.value.trim();
-    if (!task) return;
+    if (!task || !auth.currentUser) return;
 
-    currentUser.todos.push(task);
-    saveUsers();
-    loadTodos();
+    db.collection("todos").add({
+        user: auth.currentUser.uid,
+        text: task,
+        created: Date.now()
+    });
+
     todoInput.value = "";
 };
 
@@ -151,48 +135,76 @@ addTodoBtn.onclick = () => {
 // CHAT
 // -----------------------------
 function loadChat() {
-    chatMessages.innerHTML = "";
-    currentUser.messages.forEach(msg => {
-        const div = document.createElement("div");
-        div.classList.add("chat-message");
-        div.textContent = msg;
-        chatMessages.appendChild(div);
-    });
+    db.collection("chat")
+        .orderBy("created")
+        .onSnapshot(snapshot => {
+            chatMessages.innerHTML = "";
+            snapshot.forEach(doc => {
+                const div = document.createElement("div");
+                div.classList.add("chat-message");
+                div.textContent = doc.data().text;
+                chatMessages.appendChild(div);
+            });
+        });
 }
 
 sendChatBtn.onclick = () => {
     const msg = chatInput.value.trim();
-    if (!msg) return;
+    if (!msg || !auth.currentUser) return;
 
-    currentUser.messages.push(msg);
-    saveUsers();
-    loadChat();
+    db.collection("chat").add({
+        user: currentUserData.username,
+        text: msg,
+        created: Date.now()
+    });
+
     chatInput.value = "";
 };
 
 // -----------------------------
 // ADMIN PANEL
 // -----------------------------
-function updateAdminPanel() {
-    adminUsers.innerHTML = "";
+function loadAdminPanel() {
+    db.collection("users").onSnapshot(snapshot => {
+        adminUsers.innerHTML = "";
 
-    users.forEach(u => {
-        const box = document.createElement("div");
-        box.classList.add("admin-box");
+        snapshot.forEach(doc => {
+            const u = doc.data();
 
-        box.innerHTML = `
-            <strong>${u.username}</strong> (${u.isAdmin ? "Admin" : "User"})<br>
-            Taken: ${u.todos.length}<br>
-            Berichten: ${u.messages.length}
-        `;
+            const box = document.createElement("div");
+            box.classList.add("admin-box");
 
-        adminUsers.appendChild(box);
+            box.innerHTML = `
+                <strong>${u.username}</strong> (${u.isAdmin ? "Admin" : "User"})
+            `;
+
+            adminUsers.appendChild(box);
+        });
     });
 }
 
 // -----------------------------
-// AUTO LOGIN
+// AUTH STATE LISTENER
 // -----------------------------
-if (currentUser) {
-    showApp();
-}
+auth.onAuthStateChanged(async user => {
+    if (user) {
+        showApp();
+
+        const doc = await db.collection("users").doc(user.uid).get();
+        currentUserData = doc.data();
+
+        currentUserName.textContent = currentUserData.username;
+
+        loadTodos(user.uid);
+        loadChat();
+
+        if (currentUserData.isAdmin) {
+            adminSection.classList.remove("hidden");
+            loadAdminPanel();
+        } else {
+            adminSection.classList.add("hidden");
+        }
+    } else {
+        showLogin();
+    }
+});
